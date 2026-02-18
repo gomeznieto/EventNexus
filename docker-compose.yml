@@ -1,0 +1,18 @@
+
+version: '3.8'
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: eventnexus_db
+    user: root
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Pass!1234
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlvolume:/var/opt/mssql/data
+    restart: always
+
+volumes:
+    sqlvolume:

@@ -1,0 +1,6 @@
+@EventNexus.API_HostAddress = http://localhost:5230
+
+GET {{EventNexus.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

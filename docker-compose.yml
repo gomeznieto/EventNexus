@@ -1,18 +1,32 @@
-
 version: '3.8'
+
 services:
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: eventnexus_db
+  postgres-db:
+    image: postgres:16-alpine 
+    container_name: eventnexus_postgres
     user: root
-    environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=Pass!1234
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqlvolume:/var/opt/mssql/data
     restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Pass!1234
+      POSTGRES_DB: EventNexusDb 
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: eventnexus_pgadmin
+    user: root
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@eventnexus.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres-db
 
 volumes:
-    sqlvolume:
+  postgres_data:

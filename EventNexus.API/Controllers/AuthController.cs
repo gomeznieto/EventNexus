@@ -20,4 +20,16 @@ public class AuthController : ControllerBase {
         var response = await _authService.RegisterAsync(dto);
         return Created($"/api/users/{response}", new { Message = "Usuario registrado exitosamente.", UserId = response });
     }
+
+    [HttpPost("login")]
+    public async Task<IActionResult>Login([FromBody] LoginRequestDto dto){
+        var response = await _authService.LoginAsync(dto);
+        return Ok(response);
+    }
+
+    [HttpPost("verify")]
+    public async Task<IActionResult>Verify([FromBody] VerifyRequestDto dto){
+        var response = await _authService.VerifyLoginCodeAsync(dto);
+        return Ok(response);
+    }
 }

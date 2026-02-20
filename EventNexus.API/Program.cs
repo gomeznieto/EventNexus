@@ -21,44 +21,54 @@ builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connectionStrin
 
 // IDENTITY
 builder.Services.AddIdentityCore<IdentityUser>(opt =>
-{
-    opt.User.RequireUniqueEmail = true;
-})
+        {
+            opt.User.RequireUniqueEmail = true;
+        })
 .AddRoles<IdentityRole>()
-.AddEntityFrameworkStores<AppDbContext>();
+    .AddEntityFrameworkStores<AppDbContext>();
 
 // AUTENTICACION Y JWT
 builder.Services.AddAuthentication(opt =>
-{
-    opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
+        {
+            opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
 .AddJwtBearer(opt =>
-{
-    opt.TokenValidationParameters = new TokenValidationParameters
     {
-        // Validar que la firma (Key) sea correcta
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
+        opt.TokenValidationParameters = new TokenValidationParameters
+        {
+            // Validar que la firma (Key) sea correcta
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
 
-        // Validar el Emisor
-        ValidateIssuer = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            // Validar el Emisor
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
 
-        // Validar la Audiencia
-        ValidateAudience = true,
-        ValidAudience = builder.Configuration["Jwt:Audience"],
+            // Validar la Audiencia
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"],
 
-        // Validar la fecha de expiración (imprescindible)
-        ValidateLifetime = true,
+            // Validar la fecha de expiración (imprescindible)
+            ValidateLifetime = true,
 
-        // Opcional pero recomendado: quitar los 5 minutos de tolerancia que da .NET por defecto
-        ClockSkew = TimeSpan.Zero
-    };
-});
+            // Opcional pero recomendado: quitar los 5 minutos de tolerancia que da .NET por defecto
+            ClockSkew = TimeSpan.Zero
+        };
+    });
 
 // SERVICIOS
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddTransient<ITokenService, TokenService>();
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddTransient<IEmailService, MockEmailService>();
+}
+else
+{
+    builder.Services.AddTransient<IEmailService, EmailService>();
+}
 
 // ------------------------------------------------------------ //
 
@@ -78,6 +88,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.MapHealthChecks("health");
 app.MapControllers();
+
+// Create seed to init App
+await DbSeeder.Seed(app);
 
 app.Run();
 

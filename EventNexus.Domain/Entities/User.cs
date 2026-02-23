@@ -16,5 +16,7 @@ public class User{
     public ICollection<UserLoginCode> LoginCodes { get; set; } = [];
     public ICollection<Ticket> Tickets { get; set; } = [];
     public ICollection<Event> OrganizedEvents { get; set; } = [];
+    public Organizer? OrganizerProfile { get; set; }
+    public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }
 

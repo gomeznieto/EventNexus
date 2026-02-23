@@ -17,13 +17,14 @@ public class TokenService : ITokenService {
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
     }
 
-    public string CreateToken(User user, IList<string>roles)
+    public string CreateToken(User user, string securityStamp, IList<string>roles, string jti)
     {
         var claims = new List<Claim>{
             new Claim( JwtRegisteredClaimNames.Sub, user.Id.ToString()), 
             new Claim( JwtRegisteredClaimNames.Email, user.Email!),
             new Claim("FullName", $"{user.FirstName} {user.LastName}"),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, jti),
+            new Claim("SecurityStamp", securityStamp)
         };
 
         foreach(var role in roles){
@@ -34,7 +35,7 @@ public class TokenService : ITokenService {
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.Now.AddDays(7),
+            Expires = DateTime.UtcNow.AddMinutes(15),
             SigningCredentials = creds,
             Issuer = _config["Jwt:Issuer"],
             Audience = _config["Jwt:Audience"]

@@ -44,5 +44,6 @@ public class AppDbContext : IdentityDbContext {
     public DbSet<Ticket> Tickets { get; set; }
     public DbSet<Venue> Venues { get; set; }
     public DbSet<UserLoginCode> UserLoginCodes { get; set; }
-
+    public DbSet<Organizer> Organizers { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 }

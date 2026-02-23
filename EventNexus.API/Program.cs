@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using EventNexus.API.Middleware;
 using EventNexus.Application.Interfaces;
@@ -35,6 +36,8 @@ builder.Services.AddAuthentication(opt =>
         })
 .AddJwtBearer(opt =>
     {
+
+        // Validate token
         opt.TokenValidationParameters = new TokenValidationParameters
         {
             // Validar que la firma (Key) sea correcta
@@ -54,6 +57,22 @@ builder.Services.AddAuthentication(opt =>
 
             // Opcional pero recomendado: quitar los 5 minutos de tolerancia que da .NET por defecto
             ClockSkew = TimeSpan.Zero
+        };
+        
+        // Validate security stamp
+        opt.Events = new JwtBearerEvents {
+            OnTokenValidated = async context => {
+                var userManager = context.HttpContext.RequestServices.GetRequiredService<UserManager<IdentityUser>>();
+                var userId = context.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
+                var tokenStamp = context.Principal.FindFirstValue("SecurityStamp");
+
+                var user = await userManager.FindByIdAsync(userId);
+
+                if(user is null || user.SecurityStamp != tokenStamp){
+                    context.Fail("This token has been revoked");
+                }
+
+            }
         };
     });
 

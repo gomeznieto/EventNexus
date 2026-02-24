@@ -3,6 +3,7 @@ using System;
 using EventNexus.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EventNexus.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260224144346_ModifyEventTableWithStartAndEndDateAndNullableVenue")]
+    partial class ModifyEventTableWithStartAndEndDateAndNullableVenue
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -271,12 +274,7 @@ namespace EventNexus.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("OrganizerId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("OrganizerId");
 
                     b.ToTable("Venues");
                 });
@@ -550,17 +548,6 @@ namespace EventNexus.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("EventNexus.Domain.Entities.Venue", b =>
-                {
-                    b.HasOne("EventNexus.Domain.Entities.Organizer", "Organizer")
-                        .WithMany("Venues")
-                        .HasForeignKey("OrganizerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organizer");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -615,11 +602,6 @@ namespace EventNexus.Infrastructure.Migrations
             modelBuilder.Entity("EventNexus.Domain.Entities.Event", b =>
                 {
                     b.Navigation("Tickets");
-                });
-
-            modelBuilder.Entity("EventNexus.Domain.Entities.Organizer", b =>
-                {
-                    b.Navigation("Venues");
                 });
 
             modelBuilder.Entity("EventNexus.Domain.Entities.User", b =>

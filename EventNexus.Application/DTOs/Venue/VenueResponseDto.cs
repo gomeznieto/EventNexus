@@ -1,14 +1,10 @@
-namespace EventNexus.Domain.Entities;
+namespace EventNexus.Application.DTOs;
 
-public class Venue{
+public class VenueResponseDto{
    public int Id { get; set; } 
    public string Name { get; set; } = string.Empty;
    public string Address { get; set; } = string.Empty;
    public double Latitude { get; set; }
    public double Longitude { get; set; }
-
-   public Guid OrganizerId { get; set; }
-    public Organizer? Organizer { get; set; }
-
-   public ICollection<Event> Events { get; set; } = [];
+ 
 }

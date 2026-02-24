@@ -79,6 +79,8 @@ builder.Services.AddAuthentication(opt =>
 // SERVICIOS
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddTransient<ITokenService, TokenService>();
+builder.Services.AddTransient<IEventService, EventService>();
+builder.Services.AddTransient<IVenueService, VenueService>();
 
 if (builder.Environment.IsDevelopment())
 {

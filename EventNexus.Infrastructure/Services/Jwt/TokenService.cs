@@ -46,5 +46,27 @@ public class TokenService : ITokenService {
 
         return tokenHandler.WriteToken(token);
     }
+
+    public ClaimsPrincipal GetPrincipalFromExpiredToken(string token){
+        var tokenValidationParameters = new TokenValidationParameters{
+            ValidateAudience = true,
+            ValidateIssuer = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"])),
+            ValidateLifetime = false
+        };
+        
+        var tokenHandler = new JwtSecurityTokenHandler();
+
+        var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
+
+        var jwtSecurityToken = securityToken as JwtSecurityToken;
+
+        if(jwtSecurityToken is null || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase)){
+            throw new SecurityTokenException("Invalid token format or algorithm.");
+        }
+
+        return principal;
+    }
 }
 

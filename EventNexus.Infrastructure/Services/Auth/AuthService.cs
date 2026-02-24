@@ -1,14 +1,18 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using EventNexus.Application.DTOs;
 using EventNexus.Application.Interfaces;
 using EventNexus.Domain.Entities;
 using EventNexus.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace EventNexus.Infrastructure.Services;
 
 public class AuthService : IAuthService
-{   private readonly UserManager<IdentityUser> _userManager;
+{  
+    private readonly UserManager<IdentityUser> _userManager;
     private readonly AppDbContext _appDbContext;
     private readonly IEmailService _emailService;
     private readonly ITokenService _tokenService;
@@ -253,50 +257,71 @@ public class AuthService : IAuthService
         } 
     }
 
-    // TODO: Finish Refresh
-    public async Task<AuthResponseDto> RefreshTokenAsyn(RefreshTokenRequestDto dto){
-        var storedRefreshToken = await _appDbContext.RefreshTokens.FirstOrDefaultAsync( r => r.Token == dto.RefressToken);
+    // -- REFRESH TOKEN -- //
+    public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto dto){
         
-        if(storedRefreshToken is null) throw new ArgumentException("The Refresh Token is not valid");
+        // Valid expired Token
+        var tokenPrincipal = _tokenService.GetPrincipalFromExpiredToken(dto.ExpiredToken);  
+        var expiryClaim = tokenPrincipal.FindFirstValue(JwtRegisteredClaimNames.Exp);
+        var userId = tokenPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
+        var jti = tokenPrincipal.FindFirstValue(JwtRegisteredClaimNames.Jti);
 
-        if(DateTime.UtcNow > storedRefreshToken.ExpiryDate || storedRefreshToken.IsUsed || storedRefreshToken.IsRevoked) throw new ArgumentException("The Refresh Token is not valid");
-        
-        var user = await _userManager.FindByIdAsync(storedRefreshToken.UserId.ToString());
-        if(user is null) throw new ArgumentException("The user data is corruped or missing");
+        if(userId is null || jti is null || expiryClaim is null) throw new SecurityTokenException("Invalid Token Payload");
 
-        var ctxUser = await _appDbContext.Users.FirstOrDefaultAsync(u => u.Id.ToString() == user.Id);
-        if(ctxUser is null) throw new ArgumentException("The user data is corruped or missing");
+        var expiryDateUnix = long.Parse(expiryClaim); 
+        var expiryDateTimeUtc = DateTimeOffset.FromUnixTimeSeconds(expiryDateUnix).UtcDateTime;
+        if(DateTime.UtcNow < expiryDateTimeUtc) throw new SecurityTokenException("This Token has not expired yet");
+
+
+        // Valid Refresh Token
+        var storedRefreshToken = await _appDbContext.RefreshTokens
+            .FirstOrDefaultAsync( r => r.Token == dto.RefressToken);
+
+        if(storedRefreshToken is null ||
+                DateTime.UtcNow > storedRefreshToken.ExpiryDate || 
+                storedRefreshToken.IsUsed || 
+                storedRefreshToken.IsRevoked ||
+                storedRefreshToken.JwtId != jti
+          ) throw new SecurityTokenException("The Refresh Token is not valid");
+
+        // Fetch User
+        var user = await _userManager.FindByIdAsync(userId);
+        if(user is null) throw new SecurityTokenException("The User doesn't exists");
+
+        var userGuid = Guid.Parse(user.Id);
+        var ctxUser = await _appDbContext.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
+        if(ctxUser is null) throw new ArgumentException("The user data is corrupted or missing");
 
         var roles = await _userManager.GetRolesAsync(user);
 
+        // Revoking Refresh Token
         storedRefreshToken.IsRevoked = true;
         storedRefreshToken.IsUsed =  true;
-        
-        // Create new Token
-        var jti = Guid.NewGuid().ToString();
-        var token = _tokenService.CreateToken(ctxUser, user.SecurityStamp!, roles, jti);
-        var refreshTokenString = GenerateRefreshToken(); 
+
+        // Create new Token and Refresh Token
+        var newJti = Guid.NewGuid().ToString();
+        var newToken = _tokenService.CreateToken(ctxUser, user.SecurityStamp!, roles, newJti);
+        var newRefreshTokenString = GenerateRefreshToken(); 
 
         // Refresh token
         var refreshTokenEntity = new RefreshToken {
-            Token = refreshTokenString,
+            Token = newRefreshTokenString,
             UserId = Guid.Parse(user.Id),
-            JwtId = jti,
+            JwtId = newJti,
             CreationDate = DateTime.UtcNow,
             ExpiryDate = DateTime.UtcNow.AddDays(7),
             IsRevoked = false, 
             IsUsed = false,
         };
 
+        // Save new Refresh Token
         _appDbContext.RefreshTokens.Add(refreshTokenEntity);
 
         await _appDbContext.SaveChangesAsync();
 
         return new AuthResponseDto {
-            Token = token,
-            RefreshToken = refreshTokenString
+            Token = newToken,
+            RefreshToken = newRefreshTokenString
         };
-
-
     }
 }

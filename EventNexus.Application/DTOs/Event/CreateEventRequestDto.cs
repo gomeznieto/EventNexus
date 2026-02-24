@@ -1,27 +1,26 @@
+using System.ComponentModel.DataAnnotations;
 using EventNexus.Domain.Enums;
 
-namespace EventNexus.Domain.Entities;
+namespace EventNexus.Application.DTOs;
 
-public class Event{
-    public int Id { get; set; }
+public class CreateEventRequestDto{
+    [Required]
     public string Title { get; set; } = string.Empty;
+    [Required]
     public string Description { get; set; } = string.Empty;
     public string? UrlImage { get; set; }
-
+    
+    [Required]
     public DateTime StartDate { get; set; }
+    [Required]
     public DateTime EndDate { get; set; }
-    public int Duration { get; set; }
+    [Required]
     public int Capacity { get; set; }
+    [Required]
     public decimal Price { get; set; }
 
+    [Required]
     public EventModality Modality { get; set; }
-    public EventStatus Status { get; set; } = EventStatus.Draft;
-    
-    public Guid OrganizerId  { get; set; }
-    public Organizer? Organizer { get; set; }
 
     public int? VenueId { get; set; }
-    public Venue? Venue  { get; set; }
-
-    public ICollection<Ticket> Tickets { get; set; } = [];
 }

@@ -7,4 +7,5 @@ public class Organizer {
     public Guid UserId { get; set; }
 
     public User User { get; set; } = null!;
+    public ICollection<Venue> Venues { get; set; } = [];
 }

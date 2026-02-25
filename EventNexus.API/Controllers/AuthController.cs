@@ -46,11 +46,9 @@ public class AuthController : ControllerBase {
     [Authorize]
     public async Task<IActionResult> RevokeToken(){
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
         if(currentUserId is null) return BadRequest();
 
         await _authService.RevokeTokenAsync(currentUserId);
-        
         return NoContent();
     }
 

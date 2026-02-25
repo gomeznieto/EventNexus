@@ -26,6 +26,16 @@ public class EventController: ControllerBase{
 
         var response = await _eventService.CreateAsync(dto, userId);
 
-        return StatusCode(201, response); //TODO: CrateAtAction replace
+        return CreatedAtAction(nameof(GetById), new {id = response.Id}, response);
+    }
+
+    [HttpGet("{id:int}")]
+    [Authorize]
+    public async Task <IActionResult> GetById([FromRoute] int id){
+        if(id <= 0) return BadRequest();
+
+        var response = await _eventService.GetByIdAsync(id);
+
+        return Ok(response);
     }
 }

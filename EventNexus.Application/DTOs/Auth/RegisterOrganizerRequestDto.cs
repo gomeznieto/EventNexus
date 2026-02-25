@@ -11,5 +11,5 @@ public class RegisterOrganizerRequestDto{
     public string LastName { get; set; } = string.Empty;
     [Required(ErrorMessage ="Field {0} is required")]
     public string CompanyName { get; set; } = string.Empty;
-    public string? BussinessPhone { get; set; }
+    public string? BusinessPhone { get; set; }
 }

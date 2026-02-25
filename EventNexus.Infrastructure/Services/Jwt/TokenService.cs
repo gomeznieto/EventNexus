@@ -51,6 +51,8 @@ public class TokenService : ITokenService {
         var tokenValidationParameters = new TokenValidationParameters{
             ValidateAudience = true,
             ValidateIssuer = true,
+            ValidIssuer = _config["Jwt:Issuer"],
+        ValidAudience = _config["Jwt:Audience"],
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"])),
             ValidateLifetime = false

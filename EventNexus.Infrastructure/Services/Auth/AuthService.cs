@@ -127,7 +127,7 @@ public class AuthService : IAuthService
             var newOrganizer = new Organizer{
                 UserId = baseUser.Id,
                 CompanyName = dto.CompanyName,
-                BussinessPhone = dto.BussinessPhone
+                BusinessPhone = dto.BusinessPhone
             };
 
             _appDbContext.Organizers.Add(newOrganizer);
@@ -275,7 +275,7 @@ public class AuthService : IAuthService
 
         // Valid Refresh Token
         var storedRefreshToken = await _appDbContext.RefreshTokens
-            .FirstOrDefaultAsync( r => r.Token == dto.RefressToken);
+            .FirstOrDefaultAsync( r => r.Token == dto.RefreshToken);
 
         if(storedRefreshToken is null ||
                 DateTime.UtcNow > storedRefreshToken.ExpiryDate || 

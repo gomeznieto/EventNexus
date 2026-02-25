@@ -17,7 +17,7 @@ public class VenueController : ControllerBase {
          _venueService = venueService;
     }
 
-    [HttpPost("Create")]
+    [HttpPost("create")]
     [Authorize(Roles = "Organizer")]
     public async Task<IActionResult> Create(CreateVenueRequestDto dto){
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -25,7 +25,16 @@ public class VenueController : ControllerBase {
         if(userId is null) return BadRequest();
 
         var response = await _venueService.CreateAsync(dto, userId);
+        
+        return CreatedAtAction(nameof(GetById), new {id = response.Id}, response);
+    }
 
-        return StatusCode(201, response);
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id){
+        if(id <= 0) return BadRequest();
+
+        var response = await _venueService.GetByIdAsync(id);
+
+        return Ok(response);
     }
 }

@@ -14,8 +14,7 @@ public class User{
     public string? ZipCode { get; set; }
 
     public ICollection<UserLoginCode> LoginCodes { get; set; } = [];
-    public ICollection<Ticket> Tickets { get; set; } = [];
-    public ICollection<Event> OrganizedEvents { get; set; } = [];
+    public ICollection<Order> Orders { get; set; } = [];
     public Organizer? OrganizerProfile { get; set; }
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 }

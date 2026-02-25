@@ -18,6 +18,7 @@ public static class VenueMappingExtensions{
         return new VenueResponseDto{
             Id = venue.Id,
             Name = venue.Name,
+            Address = venue.Address,
             Latitude = venue.Latitude,
             Longitude = venue.Longitude
         };

@@ -13,6 +13,7 @@ public class Event{
     public int Duration { get; set; }
     public int Capacity { get; set; }
     public decimal Price { get; set; }
+    public int AvailableTickets { get; set; }
 
     public EventModality Modality { get; set; }
     public EventStatus Status { get; set; } = EventStatus.Draft;
@@ -23,5 +24,5 @@ public class Event{
     public int? VenueId { get; set; }
     public Venue? Venue  { get; set; }
 
-    public ICollection<Ticket> Tickets { get; set; } = [];
+    public ICollection<Order> Orders  { get; set; } = [];
 }

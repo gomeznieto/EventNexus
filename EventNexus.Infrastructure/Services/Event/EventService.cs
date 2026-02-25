@@ -1,14 +1,14 @@
 using EventNexus.Application.DTOs;
-using EventNexus.Application.Interfaces;
 using EventNexus.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using EventNexus.Application.Mapping;
 using EventNexus.Domain.Enums;
+using EventNexus.Application.Interfaces;
 
 namespace EventNexus.Infrastructure.Services;
 
-public class EventService : IEventService
+public class EventService : IEventService 
 {
     private readonly UserManager<IdentityUser> _userManager;
     private readonly AppDbContext _dbContext;
@@ -21,6 +21,7 @@ public class EventService : IEventService
         _dbContext = appDbContext;
     }
 
+    // -- CREATE -- //
     public async Task<EventResponseDto> CreateAsync(CreateEventRequestDto dto, string userId)
     {
         ArgumentNullException.ThrowIfNull(dto); 
@@ -39,7 +40,7 @@ public class EventService : IEventService
             throw new ArgumentException("In-Person events must have a valid Venue.");
         }
 
-        // Create new event, save and map
+        // Create
         var newEvent = dto.ToEntity(organizer.Id);
 
         _dbContext.Events.Add(newEvent);
@@ -47,5 +48,18 @@ public class EventService : IEventService
         await _dbContext.SaveChangesAsync();
 
         return newEvent.ToResponseDto();
+    }
+
+    // -- GET BY ID -- //
+    public async Task<EventResponseDto> GetByIdAsync(int id)
+    {
+       var searchedEvent = await _dbContext.Events
+           .Include(e => e.Organizer)
+           .Include(e => e.Venue)
+           .FirstOrDefaultAsync(e => e.Id == id);
+
+       if(searchedEvent is null) throw new KeyNotFoundException("The Event you are looking for does not exist.");
+        
+        return searchedEvent.ToResponseDto();
     }
 }

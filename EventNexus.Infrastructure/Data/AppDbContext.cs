@@ -16,8 +16,8 @@ public class AppDbContext : IdentityDbContext {
             .Property(t => t.Price)
             .HasPrecision(18, 2);
 
-        modelBuilder.Entity<Ticket>()
-            .Property(t => t.PricePaid)
+        modelBuilder.Entity<Order>()
+            .Property(t => t.TotalAmount)
             .HasPrecision(18, 2);
 
         modelBuilder.Entity<Event>()
@@ -28,13 +28,13 @@ public class AppDbContext : IdentityDbContext {
             .Property( e => e.Modality)
             .HasConversion<string>();
 
-        modelBuilder.Entity<Ticket>()
+        modelBuilder.Entity<Order>()
             .Property(t => t.Status)
             .HasConversion<string>();
 
-        modelBuilder.Entity<Ticket>()
+        modelBuilder.Entity<Order>()
             .HasOne(t => t.User)
-            .WithMany(u => u.Tickets)
+            .WithMany(u => u.Orders)
             .HasForeignKey(t => t.UserId)
             .OnDelete(DeleteBehavior.Restrict);
     }
@@ -46,4 +46,5 @@ public class AppDbContext : IdentityDbContext {
     public DbSet<UserLoginCode> UserLoginCodes { get; set; }
     public DbSet<Organizer> Organizers { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<Order> Orders { get; set; }
 }

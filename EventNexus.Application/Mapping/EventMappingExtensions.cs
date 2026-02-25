@@ -14,8 +14,8 @@ public static class EventMappingExtensions
             Title = dto.Title,
             Description = dto.Description,
             UrlImage = dto.UrlImage,
-            StartDate = dto.StartDate,
-            EndDate = dto.EndDate,
+            StartDate = dto.StartDate.ToUniversalTime(),
+            EndDate = dto.EndDate.ToUniversalTime(),
             Capacity = dto.Capacity,
             Price = dto.Price,
             Modality = dto.Modality,
@@ -44,7 +44,7 @@ public static class EventMappingExtensions
                 VenueId = entity.VenueId,
                
                 OrganizerName = entity.Organizer?.CompanyName ?? string.Empty, 
-                VenueName = entity.Venue?.Name 
+                VenueName = entity.Venue?.Name
             };
         }
 }

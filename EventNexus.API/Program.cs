@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json.Serialization;
 using EventNexus.API.Middleware;
 using EventNexus.Application.Interfaces;
 using EventNexus.Infrastructure.Data;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Text.Json.Serialization; 
 
 // ------------------------------------------------------------ //
 
@@ -76,11 +78,20 @@ builder.Services.AddAuthentication(opt =>
         };
     });
 
+
+// JSON
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
 // SERVICIOS
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddTransient<ITokenService, TokenService>();
 builder.Services.AddTransient<IEventService, EventService>();
 builder.Services.AddTransient<IVenueService, VenueService>();
+builder.Services.AddTransient<IProfileService, ProfileService>();
 
 if (builder.Environment.IsDevelopment())
 {

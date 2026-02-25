@@ -3,6 +3,7 @@ using System;
 using EventNexus.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EventNexus.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260225151049_ModifyOrganizerEvents")]
+    partial class ModifyOrganizerEvents
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,9 +32,6 @@ namespace EventNexus.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("AvailableTickets")
-                        .HasColumnType("integer");
 
                     b.Property<int>("Capacity")
                         .HasColumnType("integer");
@@ -83,51 +83,13 @@ namespace EventNexus.Infrastructure.Migrations
                     b.ToTable("Events");
                 });
 
-            modelBuilder.Entity("EventNexus.Domain.Entities.Order", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("EventId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EventId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Orders");
-                });
-
             modelBuilder.Entity("EventNexus.Domain.Entities.Organizer", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("BusinessPhone")
+                    b.Property<string>("BussinessPhone")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -190,18 +152,28 @@ namespace EventNexus.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("IsScanned")
-                        .HasColumnType("boolean");
+                    b.Property<int>("EventId")
+                        .HasColumnType("integer");
 
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid");
+                    b.Property<decimal>("PricePaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
-                    b.Property<Guid>("QrCode")
+                    b.Property<DateTime>("PurchasedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Tickets");
                 });
@@ -520,25 +492,6 @@ namespace EventNexus.Infrastructure.Migrations
                     b.Navigation("Venue");
                 });
 
-            modelBuilder.Entity("EventNexus.Domain.Entities.Order", b =>
-                {
-                    b.HasOne("EventNexus.Domain.Entities.Event", "Event")
-                        .WithMany("Orders")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("EventNexus.Domain.Entities.User", "User")
-                        .WithMany("Orders")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Event");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("EventNexus.Domain.Entities.Organizer", b =>
                 {
                     b.HasOne("EventNexus.Domain.Entities.User", "User")
@@ -563,13 +516,21 @@ namespace EventNexus.Infrastructure.Migrations
 
             modelBuilder.Entity("EventNexus.Domain.Entities.Ticket", b =>
                 {
-                    b.HasOne("EventNexus.Domain.Entities.Order", "Order")
+                    b.HasOne("EventNexus.Domain.Entities.Event", "Event")
                         .WithMany("Tickets")
-                        .HasForeignKey("OrderId")
+                        .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Order");
+                    b.HasOne("EventNexus.Domain.Entities.User", "User")
+                        .WithMany("Tickets")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("EventNexus.Domain.Entities.UserLoginCode", b =>
@@ -647,11 +608,6 @@ namespace EventNexus.Infrastructure.Migrations
 
             modelBuilder.Entity("EventNexus.Domain.Entities.Event", b =>
                 {
-                    b.Navigation("Orders");
-                });
-
-            modelBuilder.Entity("EventNexus.Domain.Entities.Order", b =>
-                {
                     b.Navigation("Tickets");
                 });
 
@@ -666,11 +622,11 @@ namespace EventNexus.Infrastructure.Migrations
                 {
                     b.Navigation("LoginCodes");
 
-                    b.Navigation("Orders");
-
                     b.Navigation("OrganizerProfile");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("Tickets");
                 });
 
             modelBuilder.Entity("EventNexus.Domain.Entities.Venue", b =>

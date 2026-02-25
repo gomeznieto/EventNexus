@@ -32,7 +32,6 @@ public class VenueService : IVenueService
 
         if(venueExists) throw new ArgumentException("You already have a venue with this name");
 
-        // Create venue
         var newVenue = dto.ToEntity(organizer.Id);
 
         _dbContext.Venues.Add(newVenue);
@@ -40,5 +39,15 @@ public class VenueService : IVenueService
         await _dbContext.SaveChangesAsync();
 
         return newVenue.toResponseVenue();
+    }
+
+    // -- GET BY ID -- //
+    public async Task<VenueResponseDto> GetByIdAsync(int id)
+    {
+        var searchedVenue = await _dbContext.Venues.Include(v => v.Organizer).FirstOrDefaultAsync(v => v.Id == id);
+
+        if(searchedVenue is null) throw new KeyNotFoundException("The Venue you are looking for does not exist");
+
+        return searchedVenue.toResponseVenue();
     }
 }

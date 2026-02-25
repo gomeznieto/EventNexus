@@ -17,7 +17,7 @@ public static class DbSeeder {
             if(dbContext is null || roleManager is null || userManager is null) return;
 
             // Crear Roles
-            List<string> roles = ["Admin", "Patient", "Doctor"];
+            List<string> roles = ["Admin", "Customer", "Organizer"];
             foreach(var role in roles){
                 if(!await roleManager!.RoleExistsAsync(role))
                     await roleManager.CreateAsync(new IdentityRole(role));

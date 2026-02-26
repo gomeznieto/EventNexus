@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using EventNexus.Infrastructure.HostedServices;
 using System.Text.Json.Serialization; 
 
 // ------------------------------------------------------------ //
@@ -92,6 +93,7 @@ builder.Services.AddTransient<ITokenService, TokenService>();
 builder.Services.AddTransient<IEventService, EventService>();
 builder.Services.AddTransient<IVenueService, VenueService>();
 builder.Services.AddTransient<IProfileService, ProfileService>();
+builder.Services.AddTransient<IOrderService, OrderService>();
 
 if (builder.Environment.IsDevelopment())
 {
@@ -101,6 +103,9 @@ else
 {
     builder.Services.AddTransient<IEmailService, EmailService>();
 }
+
+// Hoted Services
+builder.Services.AddHostedService<OrderExpirationWorker>();
 
 // ------------------------------------------------------------ //
 

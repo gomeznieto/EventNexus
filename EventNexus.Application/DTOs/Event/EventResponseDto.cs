@@ -12,6 +12,7 @@ public class EventResponseDto{
     public DateTime EndDate { get; set; }
     public int Duration => (int)(EndDate - StartDate).TotalMinutes; 
     public int Capacity { get; set; }
+    public int AvailableTickets { get; set; }
     public decimal Price { get; set; }
 
     public EventModality Modality { get; set; }

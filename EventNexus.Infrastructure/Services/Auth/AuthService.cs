@@ -177,6 +177,7 @@ public class AuthService : IAuthService
         return newUser;
     }
 
+    // TODO: Revoke token refresh
     // -- VERIFY CODE -- //
     public async Task<AuthResponseDto> VerifyLoginCodeAsync(VerifyRequestDto dto)
     {

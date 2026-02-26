@@ -18,6 +18,9 @@ public class CreateEventRequestDto{
     public int Capacity { get; set; }
     [Required]
     public decimal Price { get; set; }
+    [Required]
+    public int AvailableTickets { get; set; }
+
 
     [Required]
     public EventModality Modality { get; set; }

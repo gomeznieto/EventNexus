@@ -28,13 +28,13 @@ public class EventService : IEventService
 
         // Validate Organizer
         var organizer = await _dbContext.Organizers.FirstOrDefaultAsync(o => o.UserId == Guid.Parse(userId));
-        if(organizer is null) throw new ArgumentException("The Organizer does not exists!");
+        if(organizer is null) throw new KeyNotFoundException("The Organizer does not exists!");
 
         // Validate venue Id
         if(dto.VenueId.HasValue){
             // Validate Venue
             if(! await _dbContext.Venues.AnyAsync(v => v.Id == dto.VenueId)){
-                throw new ArgumentException("The Venue does not exist. You must create it first!");
+                throw new KeyNotFoundException("The Venue does not exist. You must create it first!");
             }
         } else if(dto.Modality == EventModality.InPerson){
             throw new ArgumentException("In-Person events must have a valid Venue.");
@@ -61,5 +61,23 @@ public class EventService : IEventService
        if(searchedEvent is null) throw new KeyNotFoundException("The Event you are looking for does not exist.");
         
         return searchedEvent.ToResponseDto();
+    }
+
+    public async Task<EventResponseDto> PublishEventAsync(int eventId, Guid organizerId)
+    {
+        var eventToActivate = await _dbContext.Events
+            .FirstOrDefaultAsync(e => e.OrganizerId == organizerId && e.Id == eventId);
+
+        if(eventToActivate is null) 
+            throw new KeyNotFoundException("The event does not exist, or you do not have permission to modify it.");
+
+        if(eventToActivate.Status == EventStatus.Active) 
+            throw new InvalidOperationException("This event is already active and published.");
+
+        eventToActivate.Status = EventStatus.Active;
+
+        await _dbContext.SaveChangesAsync();
+
+        return eventToActivate.ToResponseDto();
     }
 }

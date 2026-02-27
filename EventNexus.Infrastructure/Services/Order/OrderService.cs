@@ -22,7 +22,8 @@ public class OrderService : IOrderService
         _userManager = userManager;
         _dbContext = appDbContext;
     }
-
+    
+    // -- CREATE ORDER -- //
     public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderRequestDto dto, Guid userId)
     {
         // Valid Event exist

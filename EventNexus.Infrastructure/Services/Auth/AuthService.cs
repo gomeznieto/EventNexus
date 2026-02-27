@@ -2,10 +2,13 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using EventNexus.Application.DTOs;
 using EventNexus.Application.Interfaces;
+using EventNexus.Application.Settings;
 using EventNexus.Domain.Entities;
+using EventNexus.Domain.Enums;
 using EventNexus.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace EventNexus.Infrastructure.Services;
@@ -16,17 +19,24 @@ public class AuthService : IAuthService
     private readonly AppDbContext _appDbContext;
     private readonly IEmailService _emailService;
     private readonly ITokenService _tokenService;
+    private readonly TicketSettings _ticketSetting;
+    private readonly IVerificationCodeService _codeService;
+
     public AuthService(
             UserManager<IdentityUser> userManager, 
             AppDbContext appDbContext,
             IEmailService emailService,
-            ITokenService tokenService
+            IVerificationCodeService verificationCodeService,
+            ITokenService tokenService,
+            IOptions<TicketSettings> options
             )
     {
         _userManager = userManager;
         _appDbContext = appDbContext;
         _emailService = emailService;
         _tokenService = tokenService;
+        _ticketSetting = options.Value;
+        _codeService = verificationCodeService;
     }
 
     // --- LOGIN --- //
@@ -36,27 +46,9 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByEmailAsync(dto.Email);
 
         if(user is null) return new LoginResponseDto {Message = "If that email exists, a code was sent(not)"};
-
-        // Find if user got an active login code
-        var activeCode = await _appDbContext .UserLoginCodes.FirstOrDefaultAsync( u => u.UserId == Guid.Parse(user.Id) && DateTime.UtcNow < u.Expiration);
-
-        if (activeCode is not null){
-            activeCode.UsedAt = DateTime.UtcNow;
-        }
         
-        // Generate a login code
-        var code = GenerateLoginCode();
-        int expiresInMinutes = 15;
-
-        var newLoginCode = new UserLoginCode {
-            UserId = Guid.Parse(user.Id),
-            Code = code,
-            Expiration = DateTime.UtcNow.AddMinutes(expiresInMinutes),
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _appDbContext.UserLoginCodes.Add(newLoginCode);
-        await _appDbContext.SaveChangesAsync();
+        // Create code
+        var code = await _codeService.GenerateCodeAsync(Guid.Parse(user.Id), ActionType.Login);
         
         // Sending email with the login code
         var newMsg = new EmailDetailsDto {
@@ -67,15 +59,11 @@ public class AuthService : IAuthService
 
         await _emailService.SendEmailAsync(newMsg);
 
+        await _appDbContext.SaveChangesAsync();
+
         return new LoginResponseDto {Message = "If that email exists, a code was sent"};
     }
 
-    
-    private string GenerateLoginCode(){
-        var MIN_CODE = 100000; // TODO: Move to settings after it works!
-        var MAX_CODE = 999999;
-        return Random.Shared.Next(MIN_CODE, MAX_CODE).ToString(); 
-    }
 
     // --- REGISTER CUSTOMER --- //
     public async Task<Guid> RegisterCustomerAsync(RegisterCustomerRequestDto dto)
@@ -177,11 +165,9 @@ public class AuthService : IAuthService
         return newUser;
     }
 
-    // TODO: Revoke token refresh
     // -- VERIFY CODE -- //
     public async Task<AuthResponseDto> VerifyLoginCodeAsync(VerifyRequestDto dto)
     {
-
         var transaction = await _appDbContext.Database.BeginTransactionAsync();
 
         try {
@@ -190,13 +176,7 @@ public class AuthService : IAuthService
             if(user is null) throw new ArgumentException("The Email or de Code are not valid");
 
             // Verify Code from same user
-            var code = await _appDbContext.UserLoginCodes.FirstOrDefaultAsync(c => c.UserId == Guid.Parse(user.Id) && c.Code == dto.Code && c.UsedAt == null);
-
-            if(code is null) throw new ArgumentException("The code is not valid");
-            if(code.Expiration < DateTime.UtcNow) throw new ArgumentException("Code has expired");
-
-            // Update table login code
-            code.UsedAt = DateTime.UtcNow;
+            await _codeService.ValidateCodeAsync(Guid.Parse(user.Id), dto.Code, ActionType.Login);
 
             // Make Token and Refresh Toekn to response
             var roles =  await _userManager.GetRolesAsync(user);
@@ -258,21 +238,34 @@ public class AuthService : IAuthService
         } 
     }
 
+    // -- LOGOUT -- //
+    public async Task LogoutAsync(LogoutRequestDto dto){
+
+        var storedRefreshToken = await _appDbContext.RefreshTokens
+            .FirstOrDefaultAsync( r => r.Token == dto.RefreshToken);
+
+        if(storedRefreshToken is null ||
+                storedRefreshToken.IsUsed || 
+                storedRefreshToken.IsRevoked
+          ) return; 
+
+        storedRefreshToken.IsUsed =  true;
+        storedRefreshToken.IsRevoked = true;
+
+        await _appDbContext.SaveChangesAsync();
+    }
+
     // -- REFRESH TOKEN -- //
     public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequestDto dto){
-        
+
         // Valid expired Token
         var tokenPrincipal = _tokenService.GetPrincipalFromExpiredToken(dto.ExpiredToken);  
         var expiryClaim = tokenPrincipal.FindFirstValue(JwtRegisteredClaimNames.Exp);
         var userId = tokenPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
         var jti = tokenPrincipal.FindFirstValue(JwtRegisteredClaimNames.Jti);
 
-        if(userId is null || jti is null || expiryClaim is null) throw new SecurityTokenException("Invalid Token Payload");
-
-        var expiryDateUnix = long.Parse(expiryClaim); 
-        var expiryDateTimeUtc = DateTimeOffset.FromUnixTimeSeconds(expiryDateUnix).UtcDateTime;
-        if(DateTime.UtcNow < expiryDateTimeUtc) throw new SecurityTokenException("This Token has not expired yet");
-
+        if(userId is null || jti is null || expiryClaim is null) 
+            throw new SecurityTokenException("Invalid Token Payload");
 
         // Valid Refresh Token
         var storedRefreshToken = await _appDbContext.RefreshTokens
@@ -285,19 +278,27 @@ public class AuthService : IAuthService
                 storedRefreshToken.JwtId != jti
           ) throw new SecurityTokenException("The Refresh Token is not valid");
 
+        // Validate expiracy token date
+        var expiryDateUnix = long.Parse(expiryClaim); 
+        var expiryDateTimeUtc = DateTimeOffset.FromUnixTimeSeconds(expiryDateUnix).UtcDateTime;
+        if(DateTime.UtcNow < expiryDateTimeUtc)
+            throw new SecurityTokenException("This Token has not expired yet");
+
+        // Revoking Refresh Token
+        storedRefreshToken.IsUsed =  true;
+        storedRefreshToken.IsRevoked = true;
+
         // Fetch User
         var user = await _userManager.FindByIdAsync(userId);
-        if(user is null) throw new SecurityTokenException("The User doesn't exists");
+        if(user is null)
+            throw new SecurityTokenException("The User doesn't exists");
 
         var userGuid = Guid.Parse(user.Id);
         var ctxUser = await _appDbContext.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
-        if(ctxUser is null) throw new ArgumentException("The user data is corrupted or missing");
+        if(ctxUser is null) 
+            throw new ArgumentException("The user data is corrupted or missing");
 
         var roles = await _userManager.GetRolesAsync(user);
-
-        // Revoking Refresh Token
-        storedRefreshToken.IsRevoked = true;
-        storedRefreshToken.IsUsed =  true;
 
         // Create new Token and Refresh Token
         var newJti = Guid.NewGuid().ToString();
@@ -307,7 +308,7 @@ public class AuthService : IAuthService
         // Refresh token
         var refreshTokenEntity = new RefreshToken {
             Token = newRefreshTokenString,
-            UserId = Guid.Parse(user.Id),
+            UserId = userGuid,
             JwtId = newJti,
             CreationDate = DateTime.UtcNow,
             ExpiryDate = DateTime.UtcNow.AddDays(7),

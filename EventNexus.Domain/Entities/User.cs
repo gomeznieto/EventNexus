@@ -13,7 +13,7 @@ public class User{
     public string? Country { get; set; }
     public string? ZipCode { get; set; }
 
-    public ICollection<UserLoginCode> LoginCodes { get; set; } = [];
+    public ICollection<VerificationCode> LoginCodes { get; set; } = [];
     public ICollection<Order> Orders { get; set; } = [];
     public Organizer? OrganizerProfile { get; set; }
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();

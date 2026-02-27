@@ -43,7 +43,7 @@ public class AppDbContext : IdentityDbContext {
     public DbSet<Event> Events { get; set; }
     public DbSet<Ticket> Tickets { get; set; }
     public DbSet<Venue> Venues { get; set; }
-    public DbSet<UserLoginCode> UserLoginCodes { get; set; }
+    public DbSet<VerificationCode> VerificationCodes { get; set; }
     public DbSet<Organizer> Organizers { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Order> Orders { get; set; }

@@ -12,13 +12,20 @@ public class EventService : IEventService
 {
     private readonly UserManager<IdentityUser> _userManager;
     private readonly AppDbContext _dbContext;
+    private readonly IVerificationCodeService _codeService;
+    private readonly IEmailService _emailService;
+
     public EventService(
             UserManager<IdentityUser> userManager,
-            AppDbContext appDbContext
+            AppDbContext appDbContext,
+            IVerificationCodeService verificationCodeService,
+            IEmailService emailService
             )
     {
         _userManager = userManager; 
         _dbContext = appDbContext;
+        _codeService = verificationCodeService;
+        _emailService = emailService;
     }
 
     // -- CREATE -- //
@@ -63,16 +70,22 @@ public class EventService : IEventService
         return searchedEvent.ToResponseDto();
     }
 
-    public async Task<EventResponseDto> PublishEventAsync(int eventId, Guid organizerId)
+    // -- PUBLISH EVENT -- //
+    public async Task<EventResponseDto> PublishEventAsync(VerificationEventCodeDto dto)
     {
+        //Cancel Event
+        await _codeService.ValidateCodeAsync(dto.UserId, dto.Code, ActionType.PublishEvent);
+
+        // Validate Organizer
+        var organizer = await _dbContext.Organizers.FirstOrDefaultAsync(o => o.UserId == dto.UserId);
+        if(organizer is null)
+            throw new KeyNotFoundException("The organizer you are looking for to activate dows not exist");
+
         var eventToActivate = await _dbContext.Events
-            .FirstOrDefaultAsync(e => e.OrganizerId == organizerId && e.Id == eventId);
+            .FirstOrDefaultAsync(e => e.OrganizerId == organizer.Id && e.Id == dto.EventId);
 
         if(eventToActivate is null) 
-            throw new KeyNotFoundException("The event does not exist, or you do not have permission to modify it.");
-
-        if(eventToActivate.Status == EventStatus.Active) 
-            throw new InvalidOperationException("This event is already active and published.");
+            throw new KeyNotFoundException("The event you are looking for to activate dows not exist");
 
         eventToActivate.Status = EventStatus.Active;
 
@@ -80,4 +93,49 @@ public class EventService : IEventService
 
         return eventToActivate.ToResponseDto();
     }
+
+    // -- CANCEL EVENT -- //
+    public async Task<EventResponseDto> CancelEventAsync(VerificationEventCodeDto dto)
+    {
+        //Cancel Event
+        await _codeService.ValidateCodeAsync(dto.UserId, dto.Code, ActionType.CancelEvent);
+
+        // Validate Organizer
+        var organizer = await _dbContext.Organizers.FirstOrDefaultAsync(o => o.UserId == dto.UserId);
+        if(organizer is null)
+            throw new KeyNotFoundException("The organizer you are looking for to activate dows not exist");
+
+        var eventToActivate = await _dbContext.Events
+            .FirstOrDefaultAsync(e => e.OrganizerId == organizer.Id && e.Id == dto.EventId);
+
+        if(eventToActivate is null) 
+            throw new KeyNotFoundException("The event you are looking for to activate dows not exist");
+
+        eventToActivate.Status = EventStatus.Active;
+
+        await _dbContext.SaveChangesAsync();
+
+        return eventToActivate.ToResponseDto();
+    }
+
+    // -- GENERIC REQUEST EVENT GENERATE CODE -- //
+    public async Task<LoginResponseDto> RequestUpdateEventAsync(RequestUpdateEventDto dto)
+    {
+        // Create code
+        var code = await _codeService.GenerateCodeAsync(dto.UserId, dto.Action);
+        
+        // Sending email with the login code
+        var newMsg = new EmailDetailsDto {
+           Destination = dto.Email!,
+           Subject = "Verification Code",
+           Body = $"Please enter the following code to complete {nameof(dto.Action)}: {code}.\nCode will expire in 15 minutes."
+        };
+
+        await _emailService.SendEmailAsync(newMsg);
+
+        await _dbContext.SaveChangesAsync();
+
+        return new LoginResponseDto {Message = "If that email exists, a code was sent"};
+    }
+
 }

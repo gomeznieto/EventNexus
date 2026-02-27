@@ -10,10 +10,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using EventNexus.Infrastructure.HostedServices;
-using System.Text.Json.Serialization; 
+using System.Text.Json.Serialization;
+using EventNexus.Application.Settings;
 
 // ------------------------------------------------------------ //
-
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks();
@@ -95,6 +95,8 @@ builder.Services.AddTransient<IVenueService, VenueService>();
 builder.Services.AddTransient<IProfileService, ProfileService>();
 builder.Services.AddTransient<IOrderService, OrderService>();
 
+builder.Services.AddTransient<IVerificationCodeService, VerificationCodeService>();
+
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddTransient<IEmailService, MockEmailService>();
@@ -106,6 +108,12 @@ else
 
 // Hoted Services
 builder.Services.AddHostedService<OrderExpirationWorker>();
+
+// Settings Mapping
+builder.Services.AddOptions<TicketSettings>()
+    .Bind(builder.Configuration.GetSection("TicketSettingsOptions"))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 // ------------------------------------------------------------ //
 

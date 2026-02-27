@@ -36,6 +36,12 @@ public class AuthController : ControllerBase {
         return Ok(response);
     }
 
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(LogoutRequestDto dto){
+        await _authService.LogoutAsync(dto);
+        return NoContent();
+    }
+
     [HttpPost("verify")]
     public async Task<IActionResult>Verify([FromBody] VerifyRequestDto dto){
         var response = await _authService.VerifyLoginCodeAsync(dto);

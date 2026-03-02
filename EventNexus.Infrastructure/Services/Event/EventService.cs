@@ -111,7 +111,7 @@ public class EventService : IEventService
         if(eventToActivate is null) 
             throw new KeyNotFoundException("The event you are looking for to activate dows not exist");
 
-        eventToActivate.Status = EventStatus.Active;
+        eventToActivate.Status = EventStatus.Cancelled;
 
         await _dbContext.SaveChangesAsync();
 

@@ -25,7 +25,6 @@ public class VenueController : ControllerBase {
         if(userId is null) return BadRequest();
 
         var response = await _venueService.CreateAsync(dto, userId);
-        
         return CreatedAtAction(nameof(GetById), new {id = response.Id}, response);
     }
 
@@ -34,7 +33,12 @@ public class VenueController : ControllerBase {
         if(id <= 0) return BadRequest();
 
         var response = await _venueService.GetByIdAsync(id);
+        return Ok(response);
+    }
 
+    [HttpGet("all/{id:guid}")]
+    public async Task<IActionResult> GetByGuid([FromRoute] Guid id){
+        var response = await _venueService.GetByGuidAsync(id);
         return Ok(response);
     }
 }

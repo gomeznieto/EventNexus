@@ -16,13 +16,14 @@ public class OrderController : ControllerBase {
        _orderService = orderService;
    } 
 
-   [HttpPost("create-order")]
+   [HttpPost]
    public async Task<IActionResult> CreateOrder (CreateOrderRequestDto dto){
        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+       var userEmail = User.FindFirstValue(ClaimTypes.Email);
 
         if(userId is null) return BadRequest();
 
-       var response =  await _orderService.CreateOrderAsync(dto, Guid.Parse(userId));
+       var response =  await _orderService.CreateOrderAsync(dto, Guid.Parse(userId), userEmail);
        return StatusCode(201, response); //TODO:CreatAtAction
    }
 }

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using EventNexus.Application.DTOs;
 using EventNexus.Application.Interfaces;
 using EventNexus.Application.Settings;
+using EventNexus.Domain.Constants;
 using EventNexus.Domain.Entities;
 using EventNexus.Domain.Enums;
 using EventNexus.Infrastructure.Data;
@@ -80,7 +81,7 @@ public class AuthService : IAuthService
         try
         {
             // Create and Save Identity and User
-            var baseUser = await CreateBaseUserAsync(dto.Email, dto.FirstName, dto.LastName, "Customer");
+            var baseUser = await CreateBaseUserAsync(dto.Email, dto.FirstName, dto.LastName, AppRoles.Customer);
             await _appDbContext.SaveChangesAsync();
 
             await transaction.CommitAsync();
@@ -109,7 +110,7 @@ public class AuthService : IAuthService
         try
         {
             // Crate and Save IdentityUser and User
-            var baseUser = await CreateBaseUserAsync(dto.Email, dto.FirstName, dto.LastName, "Organizer");
+            var baseUser = await CreateBaseUserAsync(dto.Email, dto.FirstName, dto.LastName, AppRoles.Organizer);
 
             // Create Organizer
             var newOrganizer = new Organizer{
@@ -124,7 +125,6 @@ public class AuthService : IAuthService
             await transaction.CommitAsync();
 
             return baseUser.Id;
-
         }
         catch (System.Exception)
         {

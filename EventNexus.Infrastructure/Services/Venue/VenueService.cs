@@ -44,10 +44,23 @@ public class VenueService : IVenueService
     // -- GET BY ID -- //
     public async Task<VenueResponseDto> GetByIdAsync(int id)
     {
-        var searchedVenue = await _dbContext.Venues.Include(v => v.Organizer).FirstOrDefaultAsync(v => v.Id == id);
+        var searchedVenue = await _dbContext.Venues.FirstOrDefaultAsync(v => v.Id == id);
 
         if(searchedVenue is null) throw new KeyNotFoundException("The Venue you are looking for does not exist");
 
         return searchedVenue.toResponseVenue();
+    }
+
+    // -- GET BY ORGANIZER GUID -- //
+    public async Task<List<VenueResponseDto>> GetByGuidAsync(Guid id){
+        if(!await _dbContext.Organizers.AnyAsync(o => o.Id == id))
+            throw new KeyNotFoundException("The Organizer you are looking for does not exist");
+
+        var searchedVenues = await _dbContext.Venues
+            .Where(v => v.OrganizerId == id)
+            .Select(v => v.toResponseVenue())
+            .ToListAsync();
+
+        return searchedVenues;
     }
 }

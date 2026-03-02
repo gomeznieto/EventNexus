@@ -26,7 +26,7 @@ public class OrderExpirationWorker : BackgroundService {
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error ", ex.Message);
+                Console.WriteLine("Error en BackgroundService", ex.Message);
             }
 
             await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);

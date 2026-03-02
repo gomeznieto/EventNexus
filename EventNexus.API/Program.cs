@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Tokens;
 using EventNexus.Infrastructure.HostedServices;
 using System.Text.Json.Serialization;
 using EventNexus.Application.Settings;
+using System.Net.Http.Headers;
 
 // ------------------------------------------------------------ //
 var builder = WebApplication.CreateBuilder(args);
@@ -94,7 +95,6 @@ builder.Services.AddTransient<IEventService, EventService>();
 builder.Services.AddTransient<IVenueService, VenueService>();
 builder.Services.AddTransient<IProfileService, ProfileService>();
 builder.Services.AddTransient<IOrderService, OrderService>();
-
 builder.Services.AddTransient<IVerificationCodeService, VerificationCodeService>();
 
 if (builder.Environment.IsDevelopment())
@@ -107,6 +107,7 @@ else
 }
 
 // Hoted Services
+builder.Services.AddTransient<IOrderCleanupService, OrderCleanupService>();
 builder.Services.AddHostedService<OrderExpirationWorker>();
 
 // Settings Mapping
@@ -114,6 +115,15 @@ builder.Services.AddOptions<TicketSettings>()
     .Bind(builder.Configuration.GetSection("TicketSettingsOptions"))
     .ValidateDataAnnotations()
     .ValidateOnStart();
+
+// HttpCliens
+builder.Services.AddHttpClient<IMercadoPagoService, MercadoPagoService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.mercadopago.com/");
+
+    var accessToken = builder.Configuration["MercadoPago:AccessToken"];
+    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+});
 
 // ------------------------------------------------------------ //
 

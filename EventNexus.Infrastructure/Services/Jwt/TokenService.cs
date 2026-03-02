@@ -17,6 +17,7 @@ public class TokenService : ITokenService {
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
     }
 
+    // -- CREATE TOKEN -- //
     public string CreateToken(User user, string securityStamp, IList<string>roles, string jti)
     {
         var claims = new List<Claim>{
@@ -47,6 +48,7 @@ public class TokenService : ITokenService {
         return tokenHandler.WriteToken(token);
     }
 
+    // -- GET PRINCIPALS FROM TOKEN -- //
     public ClaimsPrincipal GetPrincipalFromExpiredToken(string token){
         var tokenValidationParameters = new TokenValidationParameters{
             ValidateAudience = true,

@@ -11,6 +11,8 @@ public class OrderResponseDto{
     public decimal TotalAmountPaid { get; set; }
     public DateTime? PaidAt { get; set; }
 
+    public string PaymentUrl { get; set; } = string.Empty;
+
     public int EventId { get; set; }
     public string EventTitle  { get; set; } = string.Empty;
     public DateTime EventStartDate { get; set; }

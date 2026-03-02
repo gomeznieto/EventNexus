@@ -5,6 +5,7 @@ using EventNexus.Domain.Enums;
 using EventNexus.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace EventNexus.Infrastructure.Services;
 
@@ -65,8 +66,8 @@ public class VerificationCodeService : IVerificationCodeService
                     c.Purpose == purpose 
                     );
 
-        if(activeCode is null) throw new ArgumentException("The code is not valid");
-        if(activeCode.Expiration < DateTime.UtcNow) throw new ArgumentException("Code has expired");
+        if(activeCode is null) throw new SecurityTokenException("The code is not valid");
+        if(activeCode.Expiration < DateTime.UtcNow) throw new SecurityTokenException("Code has expired");
 
         // Update code to revoke
         activeCode.UsedAt = DateTime.UtcNow;

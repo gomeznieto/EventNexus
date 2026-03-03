@@ -95,7 +95,7 @@ public class OrderService : IOrderService
         string checkoutUrl;
 
         try{
-            checkoutUrl = await _mercadoPagoService.CreatePaymentPreferenceAsync(newOrder);
+            checkoutUrl = await _mercadoPagoService.CreatePaymentPreferenceAsync(newOrder, userEmail);
         } catch (Exception){
             throw new ExternalException("Payment gateway is down. Prase try again later");
         }
@@ -105,4 +105,18 @@ public class OrderService : IOrderService
 
         return responseOrder;
     }
+
+    public async Task FullFillOrderAync(string orderId)
+    {
+        var order = await _dbContext.Orders.FirstOrDefaultAsync(o => o.Id == Guid.Parse(orderId));
+
+        if(order is null) 
+            throw new KeyNotFoundException("The Order you are looking for does not exist");
+
+        order.Status = TicketStatus.Paid;
+        order.PaidAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+    }
+
 }

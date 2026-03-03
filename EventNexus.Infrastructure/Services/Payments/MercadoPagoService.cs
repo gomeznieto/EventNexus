@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
-using System.Text.Json.Serialization;
 using EventNexus.Application.DTOs;
 using EventNexus.Application.Interfaces;
 using EventNexus.Domain.Entities;
-
+using System.Text.Json;
+using EventNexus.Domain.Enums;
 namespace EventNexus.Infrastructure.Services;
 
 public class MercadoPagoService : IMercadoPagoService
@@ -16,7 +16,9 @@ public class MercadoPagoService : IMercadoPagoService
 
     public async Task<string> CreatePaymentPreferenceAsync(Order order, string userEmail)
     {
-        var expirationDate = order.ExpiresAt.ToString("yyyy-MM-ddTHH:mm:ss.fffK");
+        DateTime utcNow = DateTime.UtcNow;
+        DateTime expirationUtc = utcNow.AddMinutes(15);
+        var expirationDate = expirationUtc.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", System.Globalization.CultureInfo.InvariantCulture);
 
         var preferenceRequest = new
         {
@@ -29,37 +31,56 @@ public class MercadoPagoService : IMercadoPagoService
                     currency_id = "ARS"
                 }
             },
-            payer = new {
-                email = userEmail
-            },
+            // payer = new {
+            //     email = userEmail
+            // },
             external_reference = order.Id.ToString(), 
-
-            // Webhook for your backend to listen to
-            notification_url = "https://your-ngrok-url.app/api/webhooks/mercadopago", 
-
-            // Redirects for the frontend
+            notification_url = "https://proverbially-explicit-delsie.ngrok-free.dev/api/webhook/mercadopago", 
             back_urls = new {
-                success = "http://localhost:3000/checkout/success",
-                failure = "http://localhost:3000/checkout/failure"
+                success = "https://localhost:3000/checkout/success",
+                failure = "https://localhost:3000/checkout/failure"
             },
             auto_return = "approved",
-
             binary_mode = true,
             expires = true,
             expiration_date_to = expirationDate
         };
 
-        var response = await _httpClient.PostAsJsonAsync("checkout/preferences", preferenceRequest);
+        var jsonOptions = new JsonSerializerOptions 
+        { 
+            PropertyNamingPolicy = null
+        };
+
+        var response = await _httpClient.PostAsJsonAsync("checkout/preferences", preferenceRequest, jsonOptions);
+
         response.EnsureSuccessStatusCode();
 
         var responseData = await response.Content.ReadFromJsonAsync<PreferenceResponse>();
 
-        if (responseData == null || string.IsNullOrEmpty(responseData.SandboxInitPoint))
-        {
+        if (responseData == null || string.IsNullOrEmpty(responseData.SandboxInitPoint)){
             throw new Exception("Mercado Pago did not return a valid Checkout URL.");
         }
 
         return responseData.SandboxInitPoint;
     }
+
+    public async Task<PaymentDetailDto> GetPaymentDetailsAsync(string paymentId)
+    {
+        var response = await _httpClient.GetAsync($"v1/payments/{paymentId}");
+
+        // response.EnsureSuccessStatusCode();
+
+        // TEST DEVELPMENT - CHANGE FOR EnsureSuccessStatusCode
+        if(!response.IsSuccessStatusCode){
+            var errorJson = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"\n🚨 MERCADO PAGO ERROR 🚨\n{errorJson}\n");
+            throw new Exception("Mercado Pago rejected the request. Check your terminal!");
+        }
+
+        var paymentDetails = await response.Content.ReadFromJsonAsync<PaymentDetailDto>();
+
+        return paymentDetails ?? throw new ArgumentException("Could not read payment details from Mercado Pago");
+    }
+
 }
 

@@ -96,6 +96,7 @@ builder.Services.AddTransient<IVenueService, VenueService>();
 builder.Services.AddTransient<IProfileService, ProfileService>();
 builder.Services.AddTransient<IOrderService, OrderService>();
 builder.Services.AddTransient<IVerificationCodeService, VerificationCodeService>();
+builder.Services.AddTransient<IMercadoPagoService, MercadoPagoService>();
 
 if (builder.Environment.IsDevelopment())
 {

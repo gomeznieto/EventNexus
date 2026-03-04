@@ -130,7 +130,6 @@ public class EventService : IEventService
            Subject = "Verification Code",
            Body = $"Please enter the following code to complete {nameof(dto.Action)}: {code}.\nCode will expire in 15 minutes."
         };
-
         await _emailService.SendEmailAsync(newMsg);
 
         await _dbContext.SaveChangesAsync();

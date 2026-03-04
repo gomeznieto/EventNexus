@@ -47,4 +47,5 @@ public class AppDbContext : IdentityDbContext {
     public DbSet<Organizer> Organizers { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<Order> Orders { get; set; }
+    public DbSet<EmailChangeRequest> EmailChangeRequests { get; set; }
 }

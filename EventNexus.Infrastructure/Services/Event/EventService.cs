@@ -121,20 +121,52 @@ public class EventService : IEventService
     // -- GENERIC REQUEST EVENT GENERATE CODE -- //
     public async Task<LoginResponseDto> RequestUpdateEventAsync(RequestUpdateEventDto dto)
     {
+        var organizer = await _dbContext.Organizers.FirstOrDefaultAsync(o => o.UserId == dto.UserId);
+        if(organizer is null)
+            throw new KeyNotFoundException("The organizer you are looking for to activate dows not exist");
+
+        var eventToActivate = await _dbContext.Events
+            .FirstOrDefaultAsync(e => e.OrganizerId == organizer.Id && e.Id == dto.EventId);
+
+        if(eventToActivate is null) 
+            throw new KeyNotFoundException("The event you are looking for to activate dows not exist");
+
         // Create code
         var code = await _codeService.GenerateCodeAsync(dto.UserId, dto.Action);
-        
+        await _dbContext.SaveChangesAsync();
+
         // Sending email with the login code
         var newMsg = new EmailDetailsDto {
-           Destination = dto.Email!,
-           Subject = "Verification Code",
-           Body = $"Please enter the following code to complete {nameof(dto.Action)}: {code}.\nCode will expire in 15 minutes."
+            Destination = dto.Email!,
+            Subject = "Verification Code",
+            Body = $"Please enter the following code to complete {nameof(dto.Action)}: {code}.\nCode will expire in 15 minutes."
         };
-        await _emailService.SendEmailAsync(newMsg);
 
-        await _dbContext.SaveChangesAsync();
+        await _emailService.SendEmailAsync(newMsg);
 
         return new LoginResponseDto {Message = "If that email exists, a code was sent"};
     }
 
+    public async Task<EventResponseDto> ChangePriceEventAsync(VerificationEventCodeDto dto) {
+
+        await _codeService.ValidateCodeAsync(dto.UserId, dto.Code, ActionType.UpdateEvent);
+
+        // Validate Organizer
+        var organizer = await _dbContext.Organizers.FirstOrDefaultAsync(o => o.UserId == dto.UserId);
+        if(organizer is null)
+            throw new KeyNotFoundException("The organizer you are looking for to activate dows not exist");
+
+        var eventUpdatePrice = await _dbContext.Events
+            .FirstOrDefaultAsync(e => e.OrganizerId == organizer.Id && e.Id == dto.EventId);
+
+        if(eventUpdatePrice is null) 
+            throw new KeyNotFoundException("The event you are looking for to activate dows not exist");
+
+        if(dto.Price.HasValue)
+            eventUpdatePrice.Price = dto.Price.Value;
+
+        await _dbContext.SaveChangesAsync();
+
+        return eventUpdatePrice.ToResponseDto();
+    }
 }

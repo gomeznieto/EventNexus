@@ -9,4 +9,7 @@ public class VerificationEventCodeDto{
     public int EventId { get; set; }
     [Required]
     public Guid UserId { get; set; }
+
+    // Nullables
+    public decimal? Price { get; set; }
 }

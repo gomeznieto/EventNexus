@@ -5,6 +5,7 @@ using EventNexus.Domain.Enums;
 using EventNexus.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using EventNexus.Application.Mapping;
 
 namespace EventNexus.Infrastructure.Services;
 
@@ -219,5 +220,37 @@ public class ProfileService : IProfileService
             Token = token,
             RefreshToken = refreshTokenString
         };
+    }
+
+    public async Task<CurrentUserDto> UpdateProfileAsync(string userId, UpdateProfileDto dto)
+    {
+        var userApp = await _dbContext.Users
+            .Include(u => u.OrganizerProfile)
+            .FirstOrDefaultAsync(u => u.Id == Guid.Parse(userId));
+
+        if(userApp is null)
+            throw new KeyNotFoundException("The user you are looking for does not exist");
+            
+        userApp.FirstName = dto.FirstName ?? userApp.FirstName;
+        userApp.LastName = dto.LastName ?? userApp.LastName;
+        userApp.Address = dto.Address ?? userApp.Address;
+        userApp.Country = dto.Country ?? userApp.Country;
+        userApp.City = dto.City ?? userApp.City;
+        userApp.State = dto.State ?? userApp.State;
+        userApp.ZipCode = dto.ZipCode ?? userApp.ZipCode;
+
+        await _dbContext.SaveChangesAsync();
+
+        var userIdentity = await _userManager.FindByIdAsync(userId);
+
+        if(userIdentity is null)
+            throw new ArgumentException("Try again later");
+
+        var roles = await _userManager.GetRolesAsync(userIdentity);
+
+        var userResponse = userApp.ToResponse();
+        userResponse.Roles = roles;
+        
+        return userResponse; 
     }
 }

@@ -38,6 +38,7 @@ public class ProfileController : ControllerBase{
         var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (currentUserId is null) return BadRequest();
         var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
+
         var response = await _profileService.GetCurrentAsync(currentUserId, roles);
         return Ok(response);
     }
@@ -46,11 +47,9 @@ public class ProfileController : ControllerBase{
     public async Task<IActionResult> RequestChangeEmail(){
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var userEmail = User.FindFirstValue(ClaimTypes.Email);
-
         if(userId is null || userEmail is null) return BadRequest();
         
         var response = await _profileService.RequestChangeEmailAsync(new RequestUpdateDto{Email = userEmail, UserId = Guid.Parse(userId), Action = ActionType.UpdateEmail});
-
         return Ok(response);
     }
 
@@ -58,22 +57,26 @@ public class ProfileController : ControllerBase{
     public async Task <IActionResult> AuthorizeEmailChange(AuthorizeEmailChangeDto dto){
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var userEmail = User.FindFirstValue(ClaimTypes.Email);
-
         if(userId is null || userEmail is null) return BadRequest();
 
         var response = await _profileService.AuthorizeEmailChangeAsync(Guid.Parse(userId), userEmail, dto);
-
         return Ok(response);
     }
 
     [HttpPost("change-email/confirm")]
     public async Task<IActionResult> ConfirmEmailChange(VerificationCodeDto dto) {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
         if(userId is null) return BadRequest();
 
         var response = await _profileService.ConfirmEmailChangeAsync(Guid.Parse(userId), dto);
+        return Ok(response);
+    }
 
+    public async Task<IActionResult> UpdateProfile(UpdateProfileDto dto){
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if(userId is null) return BadRequest();
+
+        var response = await _profileService.UpdateProfileAsync(userId, dto);
         return Ok(response);
     }
 } 

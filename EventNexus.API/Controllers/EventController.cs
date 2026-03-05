@@ -50,7 +50,7 @@ public class EventController: ControllerBase{
     /// <summary>
     /// Sending request to update event
     /// </summary>
-    [HttpPost("{id:int}/request-publish")]
+    [HttpPost("{id:int}/publish/request")]
     [Authorize(Roles = AppRoles.Organizer)]
     public async Task<IActionResult> RequestPublish([FromRoute] int id){
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -102,7 +102,7 @@ public class EventController: ControllerBase{
     /// <summary>
     /// Sending request to update event
     /// </summary>
-    [HttpPost("{id:int}/request-cancellation")]
+    [HttpPost("{id:int}/cancellation/request")]
     [Authorize(Roles = AppRoles.Organizer)]
     public async Task <IActionResult> RequestCancellation([FromRoute] int id){
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -135,6 +135,47 @@ public class EventController: ControllerBase{
         };
 
         var response = await _eventService.CancelEventAsync(eventDto);
+        return Ok(response);
+    }
+
+        /// <summary>
+    /// Sending request to update event
+    /// </summary>
+    [HttpPost("{id:int}/change-price/request")]
+    [Authorize(Roles = AppRoles.Organizer)]
+    public async Task <IActionResult> RequestChangePrice([FromRoute] int id){
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+
+        if(userId is null || userEmail is null) return BadRequest();
+
+        var eventDto = new RequestUpdateEventDto {
+            UserId = Guid.Parse(userId),
+            Email =  userEmail,
+            EventId = id,
+            Action = ActionType.UpdateEvent
+        };
+
+        var response = await _eventService.RequestUpdateEventAsync(eventDto);
+        return Ok(response);
+    }
+
+    [HttpPost("{id:int}/change-price")]
+    [Authorize(Roles = AppRoles.Organizer)]
+    public async Task<IActionResult>ChangePrice([FromRoute] int id, [FromBody] ChangeEventPriceDto dto){
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if(userId is null) return BadRequest();
+
+        var eventDto = new VerificationEventCodeDto {
+            Code = dto.VerificationCode,
+            UserId = Guid.Parse(userId),
+            EventId = id,
+            Price = dto.Price
+        };
+
+        var response = await _eventService.ChangePriceEventAsync(eventDto);
         return Ok(response);
     }
 

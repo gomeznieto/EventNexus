@@ -5,5 +5,8 @@ public enum ActionType {
     UpdateEmail,
     CancelEvent,
     PublishEvent,
-    DeleteAccount
+    DeleteAccount,
+    UpdateEvent,
+    UpdateProfile,
+    UpdateVenue
 }

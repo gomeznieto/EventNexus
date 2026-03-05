@@ -49,7 +49,7 @@ public class ProfileController : ControllerBase{
 
         if(userId is null || userEmail is null) return BadRequest();
         
-        var response = _profileService.RequestChangeEmailAsync(new RequestUpdateDto{Email = userEmail, UserId = Guid.Parse(userId), Action = ActionType.UpdateEmail});
+        var response = await _profileService.RequestChangeEmailAsync(new RequestUpdateDto{Email = userEmail, UserId = Guid.Parse(userId), Action = ActionType.UpdateEmail});
 
         return Ok(response);
     }

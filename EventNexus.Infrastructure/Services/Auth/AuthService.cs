@@ -181,28 +181,19 @@ public class AuthService : IAuthService
             // Make Token and Refresh Toekn to response
             var roles =  await _userManager.GetRolesAsync(user);
 
-            var ctxUser = await _appDbContext.Users.FirstOrDefaultAsync(u => u.Id == Guid.Parse(user.Id));
-            if (ctxUser is null) throw new InvalidOperationException("The User information is missing or corrupt");
+            var userApp = await _appDbContext.Users.FirstOrDefaultAsync(u => u.Id == Guid.Parse(user.Id));
+            if (userApp is null) throw new InvalidOperationException("The User information is missing or corrupt");
 
+            // Token Id
             var jti = Guid.NewGuid().ToString();
-            var token = _tokenService.CreateToken(ctxUser, user.SecurityStamp!, roles, jti);
-            var refreshTokenString = GenerateRefreshToken(); 
 
-            // Refresh token
-            var refreshTokenEntity = new RefreshToken {
-                Token = refreshTokenString,
-                UserId = Guid.Parse(user.Id),
-                JwtId = jti,
-                CreationDate = DateTime.UtcNow,
-                ExpiryDate = DateTime.UtcNow.AddDays(7),
-                IsRevoked = false, 
-                IsUsed = false,
-            };
+            // Crate token
+            var token = _tokenService.CreateToken(userApp, user.SecurityStamp!, roles, jti);
 
-            _appDbContext.RefreshTokens.Add(refreshTokenEntity);
+            // Create TokenRefresh
+            var refreshTokenString = await _tokenService.CreateTokenRefreshAsync(Guid.Parse(user.Id), jti); 
 
             await _appDbContext.SaveChangesAsync();
-
             await transaction.CommitAsync();
 
             return new AuthResponseDto {
@@ -214,13 +205,6 @@ public class AuthService : IAuthService
             await transaction.RollbackAsync();
             throw;
         }
-    }
-
-    private string GenerateRefreshToken(){
-        var randomNumber = new byte[32];
-        using var rng = System.Security.Cryptography.RandomNumberGenerator.Create();
-        rng.GetBytes(randomNumber);
-        return Convert.ToBase64String(randomNumber);
     }
 
     // -- REVOKE TOKEN --- //
@@ -240,18 +224,7 @@ public class AuthService : IAuthService
 
     // -- LOGOUT -- //
     public async Task LogoutAsync(LogoutRequestDto dto){
-
-        var storedRefreshToken = await _appDbContext.RefreshTokens
-            .FirstOrDefaultAsync( r => r.Token == dto.RefreshToken);
-
-        if(storedRefreshToken is null ||
-                storedRefreshToken.IsUsed || 
-                storedRefreshToken.IsRevoked
-          ) return; 
-
-        storedRefreshToken.IsUsed =  true;
-        storedRefreshToken.IsRevoked = true;
-
+        await _tokenService.RevokeRefreshTokenAsync(dto.RefreshToken);
         await _appDbContext.SaveChangesAsync();
     }
 
@@ -294,30 +267,16 @@ public class AuthService : IAuthService
             throw new SecurityTokenException("The User doesn't exists");
 
         var userGuid = Guid.Parse(user.Id);
-        var ctxUser = await _appDbContext.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
-        if(ctxUser is null) 
+        var userApp = await _appDbContext.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
+        if(userApp is null) 
             throw new ArgumentException("The user data is corrupted or missing");
 
         var roles = await _userManager.GetRolesAsync(user);
 
         // Create new Token and Refresh Token
         var newJti = Guid.NewGuid().ToString();
-        var newToken = _tokenService.CreateToken(ctxUser, user.SecurityStamp!, roles, newJti);
-        var newRefreshTokenString = GenerateRefreshToken(); 
-
-        // Refresh token
-        var refreshTokenEntity = new RefreshToken {
-            Token = newRefreshTokenString,
-            UserId = userGuid,
-            JwtId = newJti,
-            CreationDate = DateTime.UtcNow,
-            ExpiryDate = DateTime.UtcNow.AddDays(7),
-            IsRevoked = false, 
-            IsUsed = false,
-        };
-
-        // Save new Refresh Token
-        _appDbContext.RefreshTokens.Add(refreshTokenEntity);
+        var newToken = _tokenService.CreateToken(userApp, user.SecurityStamp!, roles, newJti);
+        var newRefreshTokenString = await _tokenService.CreateTokenRefreshAsync(userApp.Id, newJti); 
 
         await _appDbContext.SaveChangesAsync();
 

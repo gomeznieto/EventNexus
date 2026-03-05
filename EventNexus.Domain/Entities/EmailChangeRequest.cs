@@ -13,7 +13,7 @@ public class EmailChangeRequest{
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime ExpiresAt { get; set; }
-    public DateTime CompletedAt { get; set; } 
+    public DateTime? CompletedAt { get; set; } 
 
     public User User { get; set; } = null!;
 }

@@ -14,24 +14,26 @@ public class ProfileService : IProfileService
     private readonly AppDbContext _dbContext;
     private readonly IVerificationCodeService _codeService;
     private readonly IEmailService _emailService;
+    private readonly ITokenService _tokenService;
 
     public ProfileService(
             UserManager<IdentityUser> userManager,
             AppDbContext appDbContext,
             IVerificationCodeService codeService,
-            IEmailService emailService
+            IEmailService emailService,
+            ITokenService tokenService
             )
     {
         _userManager = userManager;
         _dbContext = appDbContext;
         _codeService = codeService;
         _emailService = emailService;
+        _tokenService = tokenService;
     }
 
     // -- GET PUBLIC USER -- //
     public async Task<UserPublicProfileDto> GetByIdAsync(Guid searchId)
     {
-
         // Validate Admin Profile
         var searchUser = await _userManager.FindByIdAsync(searchId.ToString());
         if (searchUser is null) 
@@ -101,6 +103,7 @@ public class ProfileService : IProfileService
 
         // Create code
         var code = await _codeService.GenerateCodeAsync(dto.UserId, dto.Action);
+        await _dbContext.SaveChangesAsync();
         
         // Sending email with the login code
         var newMsg = new EmailDetailsDto {
@@ -108,9 +111,8 @@ public class ProfileService : IProfileService
            Subject = "Verification Code",
            Body = $"Please enter the following code to complete {nameof(dto.Action)}: {code}.\nCode will expire in 15 minutes."
         };
-        await _emailService.SendEmailAsync(newMsg);
 
-        await _dbContext.SaveChangesAsync();
+        await _emailService.SendEmailAsync(newMsg);
 
         return new MessageResponseDto {Message = "If that email exists, a code was sent"};
     }
@@ -119,7 +121,7 @@ public class ProfileService : IProfileService
     public async Task<MessageResponseDto> AuthorizeEmailChangeAsync(Guid userId, string currentEmail, AuthorizeEmailChangeDto dto)
     {
         // Verify Code
-        await _codeService.ValidateCodeAsync(userId, dto.VerificationCode, ActionType.UpdateEmail);
+        await _codeService.ValidateCodeAsync(userId, dto.Code, ActionType.UpdateEmail);
        
         // Verify old request
         var existingRequest = await _dbContext.EmailChangeRequests.Where(e => 
@@ -150,6 +152,7 @@ public class ProfileService : IProfileService
 
         // Create code
         var code = await _codeService.GenerateCodeAsync(userId, ActionType.UpdateEmail);
+        await _dbContext.SaveChangesAsync();
 
         // Sending email with the login code
         var newMsg = new EmailDetailsDto {
@@ -157,8 +160,6 @@ public class ProfileService : IProfileService
             Subject = "Verification Code",
             Body = $"Please enter the following code to complete {nameof(ActionType.UpdateEmail)}: {code}.\nCode will expire in 15 minutes."
         };
-
-        await _dbContext.SaveChangesAsync();
 
         await _emailService.SendEmailAsync(newMsg);
 
@@ -171,7 +172,7 @@ public class ProfileService : IProfileService
 
         var changeEmail = await _dbContext.EmailChangeRequests.FirstOrDefaultAsync( e => 
                 e.UserId == userId &&
-                e.ExpiresAt < DateTime.UtcNow &&
+                e.ExpiresAt > DateTime.UtcNow &&
                 e.CompletedAt == null &&
                 e.Status == EmailChangeStatus.PendingConfirmation
                 );
@@ -185,25 +186,38 @@ public class ProfileService : IProfileService
         if(userIdentity is null || userApp is null)
             throw new ArgumentException("The User you are looking for does not exist");
 
+        var userRoles = await _userManager.GetRolesAsync(userIdentity);
+
+        string token;
+        string refreshTokenString;
+
         using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
         try{
-            
+            // Changin user Email
             await _userManager.SetEmailAsync(userIdentity, changeEmail.NewEmail);
             await _userManager.SetUserNameAsync(userIdentity, changeEmail.NewEmail);
             userApp.Email = changeEmail.NewEmail;
-
+            
+            // Updating changes
             changeEmail.Status = EmailChangeStatus.Completed;
             changeEmail.CompletedAt = DateTime.UtcNow;
-            
+
+            // Create new token for new email
+            var jti = Guid.NewGuid().ToString();
+            token = _tokenService.CreateToken(userApp, userIdentity.SecurityStamp!, userRoles, jti);
+            refreshTokenString = await _tokenService.CreateTokenRefreshAsync(userApp.Id, jti); 
+
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
-
         } catch(Exception){
             await transaction.RollbackAsync();
             throw;
         }
 
-        // Crer Tokens
+        return new AuthResponseDto {
+            Token = token,
+            RefreshToken = refreshTokenString
+        };
     }
 }

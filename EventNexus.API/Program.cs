@@ -10,9 +10,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using EventNexus.Infrastructure.HostedServices;
-using System.Text.Json.Serialization;
 using EventNexus.Application.Settings;
 using System.Net.Http.Headers;
+using Resend;
 
 // ------------------------------------------------------------ //
 var builder = WebApplication.CreateBuilder(args);
@@ -97,6 +97,10 @@ builder.Services.AddTransient<IProfileService, ProfileService>();
 builder.Services.AddTransient<IOrderService, OrderService>();
 builder.Services.AddTransient<IVerificationCodeService, VerificationCodeService>();
 builder.Services.AddTransient<IMercadoPagoService, MercadoPagoService>();
+
+// Resend
+// Solo referenciás el proyecto de Infrastructure
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 if (builder.Environment.IsDevelopment())
 {

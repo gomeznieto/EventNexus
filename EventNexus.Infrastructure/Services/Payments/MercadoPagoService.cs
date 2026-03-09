@@ -3,7 +3,6 @@ using EventNexus.Application.DTOs;
 using EventNexus.Application.Interfaces;
 using EventNexus.Domain.Entities;
 using System.Text.Json;
-using EventNexus.Domain.Enums;
 namespace EventNexus.Infrastructure.Services;
 
 public class MercadoPagoService : IMercadoPagoService
